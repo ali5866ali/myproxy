@@ -1,0 +1,40 @@
+name: RUN
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup
+      run: |
+        sudo apt update
+        sudo apt install -y xfce4 xfce4-goodies firefox x11vnc xvfb novnc websockify wget
+        
+    - name: Start Desktop
+      run: |
+        export DISPLAY=:1
+        Xvfb :1 -screen 0 1280x720x16 &
+        sleep 2
+        startxfce4 &
+        sleep 3
+        firefox &
+        sleep 2
+        x11vnc -display :1 -forever -nopw -quiet &
+        websockify --web /usr/share/novnc 8080 localhost:5900 &
+        
+    - name: Create Tunnel
+      run: |
+        wget -O lt https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 2>/dev/null || true
+        chmod +x lt 2>/dev/null || true
+        # استفاده از localtunnel جایگزین
+        npm install -g localtunnel
+        lt --port 8080 -o 2>&1 | tee tunnel.log &
+        sleep 10
+        cat tunnel.log | grep "your url is"
+        
+    - name: Keep Alive
+      run: sleep 21600
